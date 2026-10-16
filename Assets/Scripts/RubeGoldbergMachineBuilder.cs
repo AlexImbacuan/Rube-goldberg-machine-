@@ -159,9 +159,8 @@ public class RubeGoldbergMachineBuilder : MonoBehaviour
             null,
             null,
             null,
-            null,
-            dropBall,
-            false,
+            setKinematicTarget: dropBall,
+            setKinematicValue: false,
             requiredOtherBody: suspendedCube);
 
         ChainInteraction step9 = AddInteraction(
@@ -175,8 +174,8 @@ public class RubeGoldbergMachineBuilder : MonoBehaviour
             null,
             null,
             null,
-            gate,
-            false,
+            setKinematicTarget: dropBall,
+            setKinematicValue: false,
             requiredOtherBody: dropBall);
 
         ChainInteraction step10 = AddInteraction(
@@ -188,9 +187,8 @@ public class RubeGoldbergMachineBuilder : MonoBehaviour
             null,
             null,
             null,
-            null,
-            finalSphere,
-            false,
+            setKinematicTarget: finalSphere,
+            setKinematicValue: false,
             requiredOtherBody: dropBall);
 
         ChainInteraction step11 = AddInteraction(
