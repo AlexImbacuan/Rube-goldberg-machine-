@@ -314,19 +314,37 @@ public class RubeGoldbergMachineBuilder : MonoBehaviour
         return cube;
     }
 
-    private void SetColor(GameObject target, Color color)
+private void SetColor(GameObject target, Color color)
+{
+    Renderer renderer = target.GetComponent<Renderer>();
+    if (renderer == null)
     {
-        Renderer renderer = target.GetComponent<Renderer>();
-        if (renderer == null)
-        {
-            return;
-        }
-
-        Material material = new Material(Shader.Find("Standard"));
-        material.color = color;
-        runtimeMaterials.Add(material);
-        renderer.material = material;
+        return;
     }
+
+    // URP first; fallback to Built-in if URP is not installed
+    Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+    if (shader == null)
+    {
+        shader = Shader.Find("Standard");
+    }
+
+    Material material = new Material(shader);
+    material.color = color;
+
+    // URP uses _BaseColor; Built-in uses _Color. Set both if available.
+    if (material.HasProperty("_BaseColor"))
+    {
+        material.SetColor("_BaseColor", color);
+    }
+    if (material.HasProperty("_Color"))
+    {
+        material.SetColor("_Color", color);
+    }
+
+    runtimeMaterials.Add(material);
+    renderer.material = material;
+}
 
     private void OnDestroy()
     {

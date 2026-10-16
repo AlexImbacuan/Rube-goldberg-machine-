@@ -1,0 +1,49 @@
+# Unity project .gitattributes
+# Normalize line endings across platforms
+
+# Default: normalize to LF in repo, checkout native on each OS
+* text=auto
+
+# Unity / C# — force LF for scripts (Unity handles both but LF is cleaner)
+*.cs       text diff=csharp
+*.shader   text
+*.cginc    text
+*.hlsl     text
+*.compute  text
+
+# Unity YAML files — force LF to avoid merge conflicts
+*.meta     text
+*.unity    text
+*.prefab   text
+*.asset    text
+*.mat      text
+*.controller text
+*.anim     text
+
+# Config files
+*.json     text
+*.xml      text
+*.yml      text
+*.md       text
+
+# Binary files — never touch
+*.png      binary
+*.jpg      binary
+*.jpeg     binary
+*.gif      binary
+*.psd      binary
+*.fbx      binary
+*.obj      binary
+*.blend    binary
+*.wav      binary
+*.mp3      binary
+*.ogg      binary
+*.dll      binary
+*.so       binary
+*.a        binary
+*.lib      binary
+*.exe      binary
+*.pdb      binary
+
+# Unity specific binaries
+*.unitypackage binary
