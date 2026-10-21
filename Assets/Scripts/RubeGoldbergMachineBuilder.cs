@@ -1,20 +1,90 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+[ExecuteAlways]
 public class RubeGoldbergMachineBuilder : MonoBehaviour
 {
     [SerializeField] private bool buildOnStart = true;
 
     private readonly List<Material> runtimeMaterials = new List<Material>();
 
+    private void Awake()
+    {
+        ConfigureCameraDirector();
+    }
+
     private void Start()
     {
+        ConfigureBall();
+
         if (!buildOnStart || transform.childCount > 0)
         {
             return;
         }
 
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+        {
+            BuildInEditor();
+            return;
+        }
+#endif
+
         BuildMachine();
+    }
+
+    private void ConfigureCameraDirector()
+    {
+        if (!Application.isPlaying || FindObjectOfType<CameraMovementDirector>() != null)
+        {
+            return;
+        }
+
+        gameObject.AddComponent<CameraMovementDirector>();
+    }
+
+    private void ConfigureBall()
+    {
+        ConfigureBall("balon");
+        ConfigureBall("balon (1)");
+        ConfigureBall("balon (2)");
+    }
+
+    private void ConfigureBall(string ballName)
+    {
+        GameObject ball = GameObject.Find(ballName);
+        if (ball == null)
+        {
+            return;
+        }
+
+        Rigidbody body = ball.GetComponent<Rigidbody>();
+        if (body == null)
+        {
+            body = ball.AddComponent<Rigidbody>();
+        }
+
+        body.useGravity = true;
+        body.isKinematic = false;
+        body.interpolation = RigidbodyInterpolation.Interpolate;
+        body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+
+        Collider collider = ball.GetComponent<Collider>();
+        if (collider != null)
+        {
+            PhysicsMaterial material = new PhysicsMaterial("BallBounce");
+            material.bounciness = 0.85f;
+            material.dynamicFriction = 0.15f;
+            material.staticFriction = 0.15f;
+            material.bounceCombine = PhysicsMaterialCombine.Maximum;
+            material.frictionCombine = PhysicsMaterialCombine.Minimum;
+            collider.material = material;
+        }
+
+        if (ball.GetComponent<BallImpactLauncher>() == null)
+        {
+            ball.AddComponent<BallImpactLauncher>();
+        }
     }
 
     private void BuildMachine()
@@ -24,241 +94,49 @@ public class RubeGoldbergMachineBuilder : MonoBehaviour
 
         GameObject ramp = CreateCube("Ramp", new Vector3(-15f, 1.5f, 0f), new Vector3(8f, 0.5f, 4f), new Color(0.22f, 0.45f, 0.85f), false);
         ramp.transform.rotation = Quaternion.Euler(0f, 0f, -22f);
-        GameObject rampExitTrigger = CreateCube("RampExitTrigger", new Vector3(-11.5f, 1f, 0f), new Vector3(1f, 1f, 1.6f), new Color(1f, 1f, 1f, 0.1f), false);
-        rampExitTrigger.GetComponent<Collider>().isTrigger = true;
 
         Rigidbody starterSphere = CreateSphere("StarterSphere", new Vector3(-18.5f, 4f, 0f), 0.7f, new Color(0.95f, 0.8f, 0.15f), true);
 
-        Rigidbody domino1 = CreateDomino("Domino1", new Vector3(-9f, 1f, 0f), new Color(0.9f, 0.3f, 0.3f));
-        Rigidbody domino2 = CreateDomino("Domino2", new Vector3(-7.3f, 1f, 0f), new Color(0.85f, 0.35f, 0.2f));
-        Rigidbody domino3 = CreateDomino("Domino3", new Vector3(-5.6f, 1f, 0f), new Color(0.8f, 0.4f, 0.15f));
+        Rigidbody domino1 = CreateDomino("Step02_Domino1", new Vector3(-9f, 1f, 0f), new Color(0.9f, 0.3f, 0.3f));
+        Rigidbody domino2 = CreateDomino("Step03_Domino2", new Vector3(-7.3f, 1f, 0f), new Color(0.85f, 0.35f, 0.2f));
+        Rigidbody domino3 = CreateDomino("Step04_Domino3ToLever", new Vector3(-5.6f, 1f, 0f), new Color(0.8f, 0.4f, 0.15f));
 
         Rigidbody leverPivot = CreateCubeBody("LeverPivot", new Vector3(-3.5f, 1.2f, 0f), new Vector3(0.5f, 2f, 1f), new Color(0.35f, 0.35f, 0.4f), false);
-        Rigidbody leverArm = CreateCubeBody("LeverArm", new Vector3(-3.5f, 2.2f, 0f), new Vector3(4.8f, 0.35f, 1f), new Color(0.1f, 0.75f, 0.65f), true);
-        leverArm.mass = 1.2f;
-        HingeJoint hinge = leverArm.gameObject.AddComponent<HingeJoint>();
-        hinge.connectedBody = leverPivot;
-        hinge.axis = Vector3.forward;
-        hinge.anchor = new Vector3(-2.2f, 0f, 0f);
-        hinge.useLimits = true;
-        JointLimits limits = hinge.limits;
-        limits.min = -45f;
-        limits.max = 35f;
-        hinge.limits = limits;
-
-        Rigidbody launchAnchor = CreateCubeBody("LaunchAnchor", new Vector3(1.3f, 2.8f, 0f), new Vector3(0.5f, 0.5f, 0.5f), new Color(0.2f, 0.2f, 0.25f), false);
-        Rigidbody launchBall = CreateSphere("LaunchBall", new Vector3(0f, 2.8f, 0f), 0.55f, new Color(0.2f, 0.9f, 0.2f), true);
-        SpringJoint spring = launchBall.gameObject.AddComponent<SpringJoint>();
-        spring.connectedBody = launchAnchor;
-        spring.autoConfigureConnectedAnchor = false;
-        spring.anchor = Vector3.zero;
-        spring.connectedAnchor = Vector3.zero;
-        spring.spring = 180f;
-        spring.damper = 4f;
-        spring.minDistance = 0.2f;
-        spring.maxDistance = 0.35f;
-
-        Rigidbody suspendedCube = CreateCubeBody("SuspendedCube", new Vector3(4.4f, 3.2f, 0f), new Vector3(1.1f, 1.1f, 1.1f), new Color(0.65f, 0.2f, 0.85f), true);
-        suspendedCube.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotation;
-
-        Rigidbody seesawBase = CreateCubeBody("SeesawBase", new Vector3(8.4f, 1.15f, 0f), new Vector3(0.6f, 1.8f, 1.6f), new Color(0.32f, 0.32f, 0.32f), false);
-        Rigidbody seesaw = CreateCubeBody("Seesaw", new Vector3(8.4f, 2.05f, 0f), new Vector3(5f, 0.35f, 1f), new Color(0.2f, 0.6f, 0.95f), true);
-        HingeJoint seesawHinge = seesaw.gameObject.AddComponent<HingeJoint>();
-        seesawHinge.connectedBody = seesawBase;
-        seesawHinge.axis = Vector3.forward;
-        seesawHinge.useLimits = true;
-        JointLimits seesawLimits = seesawHinge.limits;
-        seesawLimits.min = -30f;
-        seesawLimits.max = 30f;
-        seesawHinge.limits = seesawLimits;
-
-        Rigidbody dropBall = CreateSphere("DropBall", new Vector3(11.1f, 3.9f, 0f), 0.6f, new Color(0.98f, 0.62f, 0.15f), true);
-        dropBall.isKinematic = true;
-
-        GameObject ringTrigger = CreateCube("RingTrigger", new Vector3(12.8f, 2.1f, 0f), new Vector3(1f, 1f, 1f), new Color(0.1f, 0.1f, 0.1f, 0.25f), false);
-        Collider ringCollider = ringTrigger.GetComponent<Collider>();
-        ringCollider.isTrigger = true;
-
-        Rigidbody gate = CreateCubeBody("Gate", new Vector3(15f, 1.5f, 0f), new Vector3(0.45f, 2.6f, 2f), new Color(0.85f, 0.15f, 0.45f), true);
-        gate.isKinematic = true;
-
-        Rigidbody finalSphere = CreateSphere("FinalSphere", new Vector3(13.4f, 1f, 0f), 0.7f, new Color(0.95f, 0.95f, 0.95f), true);
-        finalSphere.isKinematic = true;
-
-        GameObject finishTrigger = CreateCube("FinishTrigger", new Vector3(19.3f, 1f, 0f), new Vector3(1.4f, 1.4f, 1.4f), new Color(0.15f, 0.85f, 0.35f, 0.25f), false);
-        finishTrigger.GetComponent<Collider>().isTrigger = true;
-
-        Rigidbody goalCube = CreateCubeBody("GoalCube", new Vector3(20.7f, 1f, 0f), new Vector3(1.2f, 1.2f, 1.2f), new Color(0.1f, 0.9f, 0.9f), true);
-
-        ChainInteraction step1 = AddInteraction(
-            "Step01_RampHit",
-            ChainInteraction.InteractionMode.Trigger,
-            rampExitTrigger,
-            domino1,
-            new Vector3(14f, 0f, 0f),
-            requiredOtherBody: starterSphere);
-
-        ChainInteraction step2 = AddInteraction(
+        AddInteraction(
             "Step02_Domino1",
-            ChainInteraction.InteractionMode.Collision,
             domino1.gameObject,
             domino2,
             new Vector3(12f, 0f, 0f),
             requiredOtherBody: starterSphere);
 
-        ChainInteraction step3 = AddInteraction(
+        AddInteraction(
             "Step03_Domino2",
-            ChainInteraction.InteractionMode.Collision,
             domino2.gameObject,
             domino3,
             new Vector3(12f, 0f, 0f),
             requiredOtherBody: domino1);
 
-        ChainInteraction step4 = AddInteraction(
+        AddInteraction(
             "Step04_Domino3ToLever",
-            ChainInteraction.InteractionMode.Collision,
             domino3.gameObject,
-            leverArm,
+            leverPivot,
             new Vector3(11f, 2f, 0f),
             requiredOtherBody: domino2);
 
-        ChainInteraction step5 = AddInteraction(
-            "Step05_LeverToSpring",
-            ChainInteraction.InteractionMode.Trigger,
-            CreateTriggerFollower("LeverTipTrigger", leverArm.transform, new Vector3(2.3f, 0f, 0f), new Vector3(0.7f, 0.7f, 0.7f)),
-            null,
-            Vector3.zero,
-            null,
-            spring,
-            hinge,
-            requiredOtherBody: leverArm);
-
-        ChainInteraction step6 = AddInteraction(
-            "Step06_LaunchBallHit",
-            ChainInteraction.InteractionMode.Collision,
-            launchBall.gameObject,
-            suspendedCube,
-            new Vector3(8f, -2f, 0f),
-            suspendedCube,
-            requiredOtherBody: suspendedCube);
-
-        ChainInteraction step7 = AddInteraction(
-            "Step07_SuspendedCubeFall",
-            ChainInteraction.InteractionMode.Collision,
-            suspendedCube.gameObject,
-            seesaw,
-            new Vector3(8f, 0f, 0f),
-            requiredOtherBody: seesaw);
-
-        ChainInteraction step8 = AddInteraction(
-            "Step08_SeesawReleasesDropBall",
-            ChainInteraction.InteractionMode.Trigger,
-            CreateTriggerFollower("SeesawRightTrigger", seesaw.transform, new Vector3(2.3f, 0.5f, 0f), new Vector3(0.8f, 0.8f, 0.8f)),
-            null,
-            Vector3.zero,
-            null,
-            null,
-            null,
-            setKinematicTarget: dropBall,
-            setKinematicValue: false,
-            requiredOtherBody: suspendedCube);
-
-        ChainInteraction step9 = AddInteraction(
-            "Step09_DropBallThroughRing",
-            ChainInteraction.InteractionMode.Trigger,
-            ringTrigger,
-            null,
-            Vector3.zero,
-            null,
-            null,
-            null,
-            null,
-            null,
-            setKinematicTarget: dropBall,
-            setKinematicValue: false,
-            requiredOtherBody: dropBall);
-
-        ChainInteraction step10 = AddInteraction(
-            "Step10_GateDropStartsFinalBall",
-            ChainInteraction.InteractionMode.Collision,
-            gate.gameObject,
-            finalSphere,
-            new Vector3(12f, 0f, 0f),
-            null,
-            null,
-            null,
-            setKinematicTarget: finalSphere,
-            setKinematicValue: false,
-            requiredOtherBody: dropBall);
-
-        ChainInteraction step11 = AddInteraction(
-            "Step11_FinalBallToGoal",
-            ChainInteraction.InteractionMode.Trigger,
-            finishTrigger,
-            goalCube,
-            new Vector3(8f, 0f, 0f),
-            requiredOtherBody: finalSphere);
-
-        ChainInteraction step12 = AddInteraction(
-            "Step12_GoalImpact",
-            ChainInteraction.InteractionMode.Collision,
-            goalCube.gameObject,
-            null,
-            Vector3.zero,
-            requiredOtherBody: finalSphere);
-
-        _ = step1;
-        _ = step2;
-        _ = step3;
-        _ = step4;
-        _ = step5;
-        _ = step6;
-        _ = step7;
-        _ = step8;
-        _ = step9;
-        _ = step10;
-        _ = step11;
-        _ = step12;
-    }
-
-    private GameObject CreateTriggerFollower(string name, Transform parent, Vector3 localPosition, Vector3 scale)
-    {
-        GameObject trigger = CreateCube(name, parent.position + localPosition, scale, new Color(1f, 1f, 1f, 0.1f), false);
-        trigger.transform.SetParent(parent, true);
-        trigger.transform.localPosition = localPosition;
-        Collider col = trigger.GetComponent<Collider>();
-        col.isTrigger = true;
-        return trigger;
     }
 
     private ChainInteraction AddInteraction(
         string name,
-        ChainInteraction.InteractionMode mode,
         GameObject owner,
         Rigidbody impulseTarget,
         Vector3 impulse,
-        Rigidbody releaseConstraintTarget = null,
-        SpringJoint springToRelease = null,
-        HingeJoint hingeToMotorize = null,
-        Collider enableCollider = null,
-        Collider disableCollider = null,
-        Rigidbody setKinematicTarget = null,
-        bool setKinematicValue = false,
         Rigidbody requiredOtherBody = null)
     {
         ChainInteraction interaction = owner.AddComponent<ChainInteraction>();
         interaction.name = name;
         interaction.Configure(
-            mode,
             impulseTarget,
             impulse,
-            releaseConstraintTarget,
-            springToRelease,
-            hingeToMotorize,
-            enableCollider,
-            disableCollider,
-            setKinematicTarget,
-            setKinematicValue,
             requiredOtherBody);
         return interaction;
     }
@@ -322,20 +200,69 @@ public class RubeGoldbergMachineBuilder : MonoBehaviour
             return;
         }
 
-        Material material = new Material(Shader.Find("Standard"));
+        // URP first; fallback to Built-in if URP is not installed
+        Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+        if (shader == null)
+        {
+            shader = Shader.Find("Standard");
+        }
+
+        Material material = new Material(shader);
         material.color = color;
+
+        // URP uses _BaseColor; Built-in uses _Color. Set both if available.
+        if (material.HasProperty("_BaseColor"))
+        {
+            material.SetColor("_BaseColor", color);
+        }
+        if (material.HasProperty("_Color"))
+        {
+            material.SetColor("_Color", color);
+        }
+
         runtimeMaterials.Add(material);
         renderer.material = material;
     }
 
     private void OnDestroy()
     {
+        ClearRuntimeMaterials();
+    }
+
+#if UNITY_EDITOR
+    [ContextMenu("Build Machine (Editor)")]
+    private void BuildInEditor()
+    {
+        for (int i = transform.childCount - 1; i >= 0; i--)
+        {
+            DestroyImmediate(transform.GetChild(i).gameObject);
+        }
+
+        ClearRuntimeMaterials();
+        BuildMachine();
+        UnityEditor.EditorUtility.SetDirty(gameObject);
+        UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(gameObject.scene);
+    }
+#endif
+
+    private void ClearRuntimeMaterials()
+    {
         for (int i = 0; i < runtimeMaterials.Count; i++)
         {
-            if (runtimeMaterials[i] != null)
+            if (runtimeMaterials[i] == null)
             {
-                Destroy(runtimeMaterials[i]);
+                continue;
             }
+
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+            {
+                DestroyImmediate(runtimeMaterials[i]);
+                continue;
+            }
+#endif
+
+            Destroy(runtimeMaterials[i]);
         }
 
         runtimeMaterials.Clear();
