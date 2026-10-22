@@ -6,10 +6,11 @@ using UnityEngine;
 public class CameraDirector : MonoBehaviour
 {
     [Header("Encuadre")]
-    public Vector3 offset = new Vector3(0f, 3f, -6f);
+    public Vector3 offset = new Vector3(0f, 3.5f, -7f);
     public Vector3 offsetPlanoAmplio = new Vector3(0f, 7f, -12f);
     public Vector3 offsetPlanoFinal = new Vector3(0f, 18f, -28f);
     public float velocidadDeSuavizado = 5f;
+    public float velocidadDeRotacion = 4f;
 
     private Transform objetivoActual;
     private Vector3 offsetActual;
@@ -77,7 +78,14 @@ public class CameraDirector : MonoBehaviour
         Vector3 direccion = puntoDeInteres - transform.position;
         if (direccion.sqrMagnitude > 0.001f)
         {
-            transform.LookAt(puntoDeInteres);
+            Quaternion rotacionDeseada = Quaternion.LookRotation(direccion);
+            float suavizadoRotacion = Mathf.Clamp01(
+                Mathf.Max(0f, velocidadDeRotacion) * Time.deltaTime);
+
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                rotacionDeseada,
+                suavizadoRotacion);
         }
     }
 
