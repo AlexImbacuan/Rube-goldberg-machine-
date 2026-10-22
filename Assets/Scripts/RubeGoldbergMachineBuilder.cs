@@ -8,14 +8,15 @@ public class RubeGoldbergMachineBuilder : MonoBehaviour
 
     private readonly List<Material> runtimeMaterials = new List<Material>();
 
-    private void Awake()
-    {
-        ConfigureCameraDirector();
-    }
-
     private void Start()
     {
-        ConfigureBall();
+        ConfigurarDirectorDeCamara();
+
+        if (Application.isPlaying)
+        {
+            ConfigureStarterSphere();
+            ConfigureBall();
+        }
 
         if (!buildOnStart || transform.childCount > 0)
         {
@@ -33,14 +34,38 @@ public class RubeGoldbergMachineBuilder : MonoBehaviour
         BuildMachine();
     }
 
-    private void ConfigureCameraDirector()
+    private void ConfigureStarterSphere()
     {
-        if (!Application.isPlaying || FindObjectOfType<CameraMovementDirector>() != null)
+        GameObject starterSphere = GameObject.Find("StarterSphere");
+        if (starterSphere == null)
         {
             return;
         }
 
-        gameObject.AddComponent<CameraMovementDirector>();
+        Rigidbody body = starterSphere.GetComponent<Rigidbody>();
+        if (body == null)
+        {
+            body = starterSphere.AddComponent<Rigidbody>();
+        }
+
+        body.useGravity = true;
+        body.isKinematic = false;
+        body.WakeUp();
+    }
+
+    private void ConfigurarDirectorDeCamara()
+    {
+        if (!Application.isPlaying)
+        {
+            return;
+        }
+
+        Camera camaraPrincipal = Camera.main;
+        if (camaraPrincipal != null &&
+            camaraPrincipal.GetComponent<CameraDirector>() == null)
+        {
+            camaraPrincipal.gameObject.AddComponent<CameraDirector>();
+        }
     }
 
     private void ConfigureBall()
